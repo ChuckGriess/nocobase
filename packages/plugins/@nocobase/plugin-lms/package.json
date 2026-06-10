@@ -1,0 +1,33 @@
+{
+  "name": "@nocobase/plugin-lms",
+  "displayName": "Learning Management System",
+  "displayName.zh-CN": "学习管理系统",
+  "description": "Core LMS: courses, modules, lessons, enrollments, assignments, quizzes, certificates, and announcements.",
+  "description.zh-CN": "核心LMS：课程、模块、课时、报名、作业、测验、证书和公告。",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "main": "./dist/server/index.js",
+  "keywords": [
+    "LMS",
+    "Education",
+    "Courses"
+  ],
+  "devDependencies": {
+    "@formily/react": "2.x",
+    "@formily/shared": "2.x",
+    "antd": "5.x",
+    "dayjs": "^1.11.8",
+    "i18next": "^22.4.9",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^11.15.1"
+  },
+  "peerDependencies": {
+    "@nocobase/actions": "2.x",
+    "@nocobase/client": "2.x",
+    "@nocobase/database": "2.x",
+    "@nocobase/resourcer": "2.x",
+    "@nocobase/server": "2.x",
+    "@nocobase/utils": "2.x"
+  }
+}
