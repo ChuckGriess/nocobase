@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Railway configuration for NocoBase LMS
+# https://docs.railway.com/reference/config-as-code
+# ─────────────────────────────────────────────────────────────────────────────
+
+[build]
+# Tell Railway to use our custom Dockerfile instead of Nixpacks
+dockerfilePath = "deploy/railway/Dockerfile"
+
+[deploy]
+# Healthcheck — NocoBase's gateway responds 200 "ok" to any path ending in
+# /__health_check once the app status is "running" (see packages/core/server
+# gateway). Do NOT use /api/health — that route does not exist.
+healthcheckPath    = "/__health_check"
+healthcheckTimeout = 300   # seconds — first boot runs migrations
+
+# Restart on crash (not on healthy exit)
+restartPolicyType = "ON_FAILURE"
+
+# Scale to a single replica by default; increase for traffic
+numReplicas = 1
+
+[[services]]
+# The app service reads all env vars from Railway's Variables panel.
+# Required variables are documented in deploy/railway/.env.example
+name = "nocobase-lms"
+
+[mounts]
+# Attach a Railway persistent volume at /app/storage for file uploads.
+# In the Railway dashboard: add a Volume and set the mount path to /app/storage
+mountPath = "/app/storage"
