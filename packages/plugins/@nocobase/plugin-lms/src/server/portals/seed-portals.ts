@@ -59,16 +59,45 @@ export async function seedPortal(db: Database, group: PortalGroup): Promise<void
   let sort = 0;
   for (const page of group.pages) {
     sort += 1;
-    const schema = buildTableBlockPage({ key: page.key, collection: page.collection });
-    const schemaUid = schema['x-uid'];
+    const { schema, pageUid, tabUid, tabSchemaName, blockUid } = buildTableBlockPage({
+      key: page.key,
+      collection: page.collection,
+    });
 
-    const existing = await routesRepo.findOne({ filter: { schemaUid } });
+    const existing = await routesRepo.findOne({ filter: { schemaUid: pageUid } });
     if (existing) {
+      // Repair pass: pages seeded without the hidden `tabs` child route render
+      // an empty body (PageContent reads children[0].schemaUid).
+      const existingTab = await routesRepo.findOne({
+        filter: { type: 'tabs', parentId: existing.get('id') },
+      });
+      if (!existingTab) {
+        const tabRoute = await routesRepo.create({
+          values: {
+            type: 'tabs',
+            schemaUid: tabUid,
+            tabSchemaName,
+            parentId: existing.get('id'),
+            hidden: true,
+          },
+        });
+        newlyCreatedRouteIds.push(tabRoute.get('id') as number);
+      }
+
+      // Repair pass: re-insert pages whose table block predates the current
+      // block shape (marked by `x-use-decorator-props`) — the old shape
+      // renders an empty column.
+      const blockRow = await uiSchemas.findOne({ filter: { 'x-uid': blockUid } });
+      const blockNode = blockRow?.get('schema') as Record<string, unknown> | undefined;
+      if (blockNode && !blockNode['x-use-decorator-props']) {
+        await uiSchemas.remove(pageUid);
+        await uiSchemas.insert(schema);
+      }
       continue;
     }
 
     // Insert the page UI schema (guarded — insert is a no-op-safe if already present)
-    const hasSchema = await uiSchemas.findById?.(schemaUid).catch?.(() => null);
+    const hasSchema = await uiSchemas.findById?.(pageUid).catch?.(() => null);
     if (!hasSchema) {
       await uiSchemas.insert(schema);
     }
@@ -78,8 +107,8 @@ export async function seedPortal(db: Database, group: PortalGroup): Promise<void
         type: 'page',
         title: page.title,
         icon: page.icon ?? 'FileOutlined',
-        schemaUid,
-        menuSchemaUid: `${schemaUid}_menu`,
+        schemaUid: pageUid,
+        menuSchemaUid: `${pageUid}_menu`,
         parentId: groupRoute.get('id'),
         sort,
         enableTabs: false,
@@ -89,6 +118,18 @@ export async function seedPortal(db: Database, group: PortalGroup): Promise<void
       },
     });
     newlyCreatedRouteIds.push(pageRoute.get('id') as number);
+
+    // Hidden tab route — the page body renders this tab's schema (the grid).
+    const tabRoute = await routesRepo.create({
+      values: {
+        type: 'tabs',
+        schemaUid: tabUid,
+        tabSchemaName,
+        parentId: pageRoute.get('id'),
+        hidden: true,
+      },
+    });
+    newlyCreatedRouteIds.push(tabRoute.get('id') as number);
   }
 
   // ── Bind newly created routes to the role ────────────────────────────────

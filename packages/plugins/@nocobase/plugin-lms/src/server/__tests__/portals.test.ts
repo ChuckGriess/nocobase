@@ -54,13 +54,23 @@ describe('instructor portal seeding', () => {
     expect(courseSchema).toBeTruthy();
   });
 
+  it('creates a hidden tabs child route pointing at the page grid', async () => {
+    const routes = db.getRepository('desktopRoutes');
+    const page = await routes.findOne({ filter: { schemaUid: 'lms_instructor_courses_page' } });
+    const tab = await routes.findOne({ filter: { type: 'tabs', parentId: page.get('id') } });
+    expect(tab).toBeTruthy();
+    expect(tab.get('schemaUid')).toBe('lms_instructor_courses_grid');
+    expect(tab.get('tabSchemaName')).toBe('grid');
+    expect(tab.get('hidden')).toBe(true);
+  });
+
   it('binds each portal to its own role (instructor vs student are isolated)', async () => {
     const instructorRoutes = await db.getRepository('roles.desktopRoutes', 'instructor').find();
-    // 1 group + N pages
-    expect(instructorRoutes.length).toBe(INSTRUCTOR_PORTAL.pages.length + 1);
+    // 1 group + N pages + N hidden tab routes
+    expect(instructorRoutes.length).toBe(INSTRUCTOR_PORTAL.pages.length * 2 + 1);
 
     const studentRoutes = await db.getRepository('roles.desktopRoutes', 'student').find();
-    expect(studentRoutes.length).toBe(STUDENT_PORTAL.pages.length + 1);
+    expect(studentRoutes.length).toBe(STUDENT_PORTAL.pages.length * 2 + 1);
 
     // The instructor must not see the student catalog page, and vice versa
     const instructorTitles = instructorRoutes.map((r: any) => r.get('title'));

@@ -10,12 +10,13 @@
 /**
  * Builders for portal page UI schemas.
  *
- * The shapes here mirror NocoBase's own proven page/table-block schema
- * (see packages/core/test/src/e2e/templatesOfPage.ts). Columns, fields and
- * actions are intentionally left to the standard `x-initializer`s so they are
- * configured in the visual editor (the "manual polish" half of the hybrid
- * approach). x-uids are derived deterministically from `key` so re-seeding is
- * idempotent.
+ * The shapes here mirror what the visual editor produces today
+ * (see packages/core/client/src/modules/blocks/data-blocks/table/
+ * createTableBlockUISchema.ts and modules/menu/PageMenuItem.tsx). Columns,
+ * fields and actions are intentionally left to the standard `x-initializer`s
+ * so they are configured in the visual editor (the "manual polish" half of the
+ * hybrid approach). x-uids are derived deterministically from `key` so
+ * re-seeding is idempotent.
  */
 
 export interface PageSchema {
@@ -23,21 +24,35 @@ export interface PageSchema {
   [key: string]: unknown;
 }
 
+export interface TableBlockPage {
+  schema: PageSchema;
+  pageUid: string;
+  /** Grid uid — the page's single tab; desktopRoutes tabs.schemaUid must point here. */
+  tabUid: string;
+  /** Schema property name of the grid — desktopRoutes tabs.tabSchemaName. */
+  tabSchemaName: string;
+  /** Table block uid — used to detect stale schema shapes on upgrade. */
+  blockUid: string;
+}
+
 /**
  * Build a Page that contains a single Table block bound to `collection`.
- * Returns the schema plus the page-level x-uid (used as desktopRoutes.schemaUid).
+ *
+ * The Page itself is not async; its content lives in an async Grid child that
+ * the client loads through the page route's hidden `tabs` child route
+ * (`tabs.schemaUid` = grid uid, `tabs.tabSchemaName` = grid property name) —
+ * the same shape the visual editor produces (see PageMenuItem/getPageMenuSchema).
  */
-export function buildTableBlockPage(opts: { key: string; collection: string }): PageSchema {
+export function buildTableBlockPage(opts: { key: string; collection: string }): TableBlockPage {
   const { key, collection } = opts;
   const uid = (suffix: string) => `lms_${key}_${suffix}`;
 
-  return {
+  const schema: PageSchema = {
     _isJSONSchemaObject: true,
     version: '2.0',
     type: 'void',
     'x-component': 'Page',
     'x-uid': uid('page'),
-    'x-async': true,
     'x-index': 1,
     properties: {
       grid: {
@@ -47,7 +62,7 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
         'x-component': 'Grid',
         'x-initializer': 'page:addBlock',
         'x-uid': uid('grid'),
-        'x-async': false,
+        'x-async': true,
         'x-index': 1,
         properties: {
           row: {
@@ -74,17 +89,17 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
                     type: 'void',
                     'x-decorator': 'TableBlockProvider',
                     'x-acl-action': `${collection}:list`,
+                    'x-use-decorator-props': 'useTableBlockDecoratorProps',
                     'x-decorator-props': {
                       collection,
-                      resource: collection,
+                      dataSource: 'main',
                       action: 'list',
                       params: { pageSize: 20 },
-                      rowKey: 'id',
                       showIndex: true,
                       dragSort: false,
-                      disableTemplate: false,
                     },
-                    'x-designer': 'TableBlockDesigner',
+                    'x-toolbar': 'BlockSchemaToolbar',
+                    'x-settings': 'blockSettings:table',
                     'x-component': 'CardItem',
                     'x-filter-targets': [],
                     'x-uid': uid('block'),
@@ -108,10 +123,10 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
                         type: 'array',
                         'x-initializer': 'table:configureColumns',
                         'x-component': 'TableV2',
+                        'x-use-component-props': 'useTableBlockProps',
                         'x-component-props': {
                           rowKey: 'id',
                           rowSelection: { type: 'checkbox' },
-                          useProps: '{{ useTableBlockProps }}',
                         },
                         'x-uid': uid('table'),
                         'x-async': false,
@@ -125,8 +140,10 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
                             'x-action-column': 'actions',
                             'x-decorator': 'TableV2.Column.ActionBar',
                             'x-component': 'TableV2.Column',
-                            'x-designer': 'TableV2.ActionColumnDesigner',
+                            'x-toolbar': 'TableColumnSchemaToolbar',
                             'x-initializer': 'table:configureItemActions',
+                            'x-settings': 'fieldSettings:TableColumn',
+                            'x-toolbar-props': { initializer: 'table:configureItemActions' },
                             'x-uid': uid('tableActionsCol'),
                             'x-async': false,
                             'x-index': 1,
@@ -156,4 +173,6 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
       },
     },
   };
+
+  return { schema, pageUid: uid('page'), tabUid: uid('grid'), tabSchemaName: 'grid', blockUid: uid('block') };
 }

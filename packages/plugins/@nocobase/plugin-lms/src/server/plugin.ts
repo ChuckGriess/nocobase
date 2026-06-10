@@ -223,6 +223,7 @@ export class PluginLMSServer extends Plugin {
   }
 
   async install() {
+    await this.registerCollectionsWithUI();
     await this.seedRoles();
     await this.seedAclResources();
     await this.seedPortals();
@@ -231,9 +232,28 @@ export class PluginLMSServer extends Plugin {
 
   async upgrade() {
     // Re-apply ACL + portal + workflow scaffolding on upgrade (all idempotent)
+    await this.registerCollectionsWithUI();
     await this.seedAclResources();
     await this.seedPortals();
     await seedWorkflows(this.db);
+  }
+
+  /**
+   * Register the code-defined LMS collections with the collection manager
+   * (collections/fields metadata tables) so they are visible to the UI block
+   * builder — same mechanism plugin-users uses for `users` (db2cm). Skips
+   * collections that are already registered.
+   */
+  private async registerCollectionsWithUI() {
+    const repo = this.db.getRepository<any>('collections');
+    if (!repo?.db2cm) {
+      return;
+    }
+    for (const [name] of this.db.collections) {
+      if (name.startsWith('lms_')) {
+        await repo.db2cm(name);
+      }
+    }
   }
 
   private async seedPortals() {
@@ -278,17 +298,30 @@ export class PluginLMSServer extends Plugin {
         });
       }
 
+      // The `fields` column is a whitelist — an empty list strips every field
+      // from responses, so an omitted/empty list resolves to all fields.
+      const allFields = [...this.db.getCollection(def.resource).fields.keys()];
+
       for (const [actionName, actionConfig] of Object.entries(def.actions)) {
+        const { filter, fields } = actionConfig as { filter?: Record<string, unknown>; fields?: string[] };
+        const resolvedFields = fields?.length ? fields : allFields;
+
         const existingAction = await actionRepo.findOne({
           filter: { rolesResourceId: resource.get('id'), name: actionName },
         });
         if (existingAction) {
+          const currentFields = (existingAction.get('fields') as string[]) ?? [];
+          if (currentFields.length === 0) {
+            await actionRepo.update({
+              filterByTk: existingAction.get('id'),
+              values: { fields: resolvedFields },
+            });
+          }
           continue;
         }
 
         // A row-level filter is stored in a Scope record (the ACL reads
         // scope.scope as the action filter); `fields` lives on the action.
-        const { filter, fields } = actionConfig as { filter?: Record<string, unknown>; fields?: string[] };
         let scopeId: number | undefined;
         if (filter) {
           const scope = await scopeRepo.create({
@@ -306,7 +339,7 @@ export class PluginLMSServer extends Plugin {
           values: {
             rolesResourceId: resource.get('id'),
             name: actionName,
-            fields: fields ?? [],
+            fields: resolvedFields,
             ...(scopeId ? { scopeId } : {}),
           },
         });
