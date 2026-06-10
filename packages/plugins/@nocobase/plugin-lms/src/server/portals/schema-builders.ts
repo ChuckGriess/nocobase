@@ -24,6 +24,13 @@ export interface PageSchema {
   [key: string]: unknown;
 }
 
+export interface ColumnDef {
+  /** Field name on the page's collection. */
+  field: string;
+  /** For association fields: the label field on the target collection (e.g. 'title', 'nickname'). */
+  targetLabelField?: string;
+}
+
 export interface TableBlockPage {
   schema: PageSchema;
   pageUid: string;
@@ -33,6 +40,8 @@ export interface TableBlockPage {
   tabSchemaName: string;
   /** Table block uid — used to detect stale schema shapes on upgrade. */
   blockUid: string;
+  /** Uid of the first seeded field column — used to detect column-less pages on upgrade. */
+  firstColumnUid?: string;
 }
 
 /**
@@ -43,9 +52,44 @@ export interface TableBlockPage {
  * (`tabs.schemaUid` = grid uid, `tabs.tabSchemaName` = grid property name) —
  * the same shape the visual editor produces (see PageMenuItem/getPageMenuSchema).
  */
-export function buildTableBlockPage(opts: { key: string; collection: string }): TableBlockPage {
-  const { key, collection } = opts;
+export function buildTableBlockPage(opts: { key: string; collection: string; columns?: ColumnDef[] }): TableBlockPage {
+  const { key, collection, columns = [] } = opts;
   const uid = (suffix: string) => `lms_${key}_${suffix}`;
+
+  // Column shape mirrors the `table:configureColumns` initializer wrap
+  // (see client TableColumnInitializers.tsx + useTableColumnInitializerFields).
+  const columnProperties: Record<string, unknown> = {};
+  columns.forEach((col, i) => {
+    columnProperties[col.field] = {
+      _isJSONSchemaObject: true,
+      version: '2.0',
+      type: 'void',
+      'x-decorator': 'TableV2.Column.Decorator',
+      'x-toolbar': 'TableColumnSchemaToolbar',
+      'x-settings': 'fieldSettings:TableColumn',
+      'x-component': 'TableV2.Column',
+      'x-uid': uid(`col_${col.field}`),
+      'x-async': false,
+      'x-index': i + 1,
+      properties: {
+        [col.field]: {
+          _isJSONSchemaObject: true,
+          version: '2.0',
+          'x-collection-field': `${collection}.${col.field}`,
+          'x-component': 'CollectionField',
+          'x-component-props': col.targetLabelField
+            ? { ellipsis: true, fieldNames: { label: col.targetLabelField, value: 'id' } }
+            : { ellipsis: true },
+          'x-read-pretty': true,
+          'x-decorator': null,
+          'x-decorator-props': { labelStyle: { display: 'none' } },
+          'x-uid': uid(`cell_${col.field}`),
+          'x-async': false,
+          'x-index': 1,
+        },
+      },
+    };
+  });
 
   const schema: PageSchema = {
     _isJSONSchemaObject: true,
@@ -132,6 +176,7 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
                         'x-async': false,
                         'x-index': 2,
                         properties: {
+                          ...columnProperties,
                           actions: {
                             _isJSONSchemaObject: true,
                             version: '2.0',
@@ -146,7 +191,7 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
                             'x-toolbar-props': { initializer: 'table:configureItemActions' },
                             'x-uid': uid('tableActionsCol'),
                             'x-async': false,
-                            'x-index': 1,
+                            'x-index': columns.length + 1,
                             properties: {
                               actions: {
                                 _isJSONSchemaObject: true,
@@ -174,5 +219,12 @@ export function buildTableBlockPage(opts: { key: string; collection: string }): 
     },
   };
 
-  return { schema, pageUid: uid('page'), tabUid: uid('grid'), tabSchemaName: 'grid', blockUid: uid('block') };
+  return {
+    schema,
+    pageUid: uid('page'),
+    tabUid: uid('grid'),
+    tabSchemaName: 'grid',
+    blockUid: uid('block'),
+    firstColumnUid: columns.length ? `lms_${key}_col_${columns[0].field}` : undefined,
+  };
 }

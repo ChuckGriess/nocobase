@@ -54,6 +54,21 @@ describe('instructor portal seeding', () => {
     expect(courseSchema).toBeTruthy();
   });
 
+  it('seeds table columns for each page', async () => {
+    const uiSchemas = db.getRepository<any>('uiSchemas');
+    // First defined column of the instructor My Courses page
+    const col = await uiSchemas.findOne({ filter: { 'x-uid': 'lms_instructor_courses_col_title' } });
+    expect(col).toBeTruthy();
+    expect(col.get('schema')['x-component']).toBe('TableV2.Column');
+
+    const cell = await uiSchemas.findOne({ filter: { 'x-uid': 'lms_instructor_courses_cell_title' } });
+    expect(cell.get('schema')['x-collection-field']).toBe('lms_courses.title');
+
+    // Association column carries fieldNames pointing at the target label field
+    const assocCell = await uiSchemas.findOne({ filter: { 'x-uid': 'lms_student_enrollments_cell_course' } });
+    expect(assocCell.get('schema')['x-component-props'].fieldNames).toEqual({ label: 'title', value: 'id' });
+  });
+
   it('creates a hidden tabs child route pointing at the page grid', async () => {
     const routes = db.getRepository('desktopRoutes');
     const page = await routes.findOne({ filter: { schemaUid: 'lms_instructor_courses_page' } });

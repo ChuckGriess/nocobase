@@ -254,6 +254,37 @@ export class PluginLMSServer extends Plugin {
         await repo.db2cm(name);
       }
     }
+    await this.backfillFieldUiSchemas();
+  }
+
+  /**
+   * db2cm() copies field options as they were at registration time and skips
+   * collections that already exist, so uiSchemas added to code-defined fields
+   * later never reach the fields metadata. Backfill them (UI can't render a
+   * column for a field without a uiSchema).
+   */
+  private async backfillFieldUiSchemas() {
+    const fieldsRepo = this.db.getRepository('fields');
+    if (!fieldsRepo) {
+      return;
+    }
+    for (const [collectionName, collection] of this.db.collections) {
+      if (!collectionName.startsWith('lms_')) {
+        continue;
+      }
+      for (const [fieldName, field] of collection.fields) {
+        if (!field.options.uiSchema) {
+          continue;
+        }
+        const row = await fieldsRepo.findOne({ filter: { collectionName, name: fieldName } });
+        if (row && !row.get('uiSchema')) {
+          await fieldsRepo.update({
+            filter: { collectionName, name: fieldName },
+            values: { uiSchema: field.options.uiSchema },
+          });
+        }
+      }
+    }
   }
 
   private async seedPortals() {

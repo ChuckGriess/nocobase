@@ -8,7 +8,7 @@
  */
 
 import type Database from '@nocobase/database';
-import { buildTableBlockPage } from './schema-builders';
+import { buildTableBlockPage, ColumnDef } from './schema-builders';
 
 export interface PortalPage {
   /** Stable key — drives deterministic schema x-uids (idempotency). */
@@ -16,6 +16,8 @@ export interface PortalPage {
   title: string;
   icon?: string;
   collection: string;
+  /** Table columns seeded on the page (further configurable in the visual editor). */
+  columns?: ColumnDef[];
 }
 
 export interface PortalGroup {
@@ -59,9 +61,10 @@ export async function seedPortal(db: Database, group: PortalGroup): Promise<void
   let sort = 0;
   for (const page of group.pages) {
     sort += 1;
-    const { schema, pageUid, tabUid, tabSchemaName, blockUid } = buildTableBlockPage({
+    const { schema, pageUid, tabUid, tabSchemaName, blockUid, firstColumnUid } = buildTableBlockPage({
       key: page.key,
       collection: page.collection,
+      columns: page.columns,
     });
 
     const existing = await routesRepo.findOne({ filter: { schemaUid: pageUid } });
@@ -86,10 +89,13 @@ export async function seedPortal(db: Database, group: PortalGroup): Promise<void
 
       // Repair pass: re-insert pages whose table block predates the current
       // block shape (marked by `x-use-decorator-props`) — the old shape
-      // renders an empty column.
+      // renders an empty column — or that were seeded before columns existed.
       const blockRow = await uiSchemas.findOne({ filter: { 'x-uid': blockUid } });
       const blockNode = blockRow?.get('schema') as Record<string, unknown> | undefined;
-      if (blockNode && !blockNode['x-use-decorator-props']) {
+      const staleBlock = blockNode && !blockNode['x-use-decorator-props'];
+      const missingColumns =
+        blockNode && firstColumnUid && !(await uiSchemas.findOne({ filter: { 'x-uid': firstColumnUid } }));
+      if (staleBlock || missingColumns) {
         await uiSchemas.remove(pageUid);
         await uiSchemas.insert(schema);
       }
