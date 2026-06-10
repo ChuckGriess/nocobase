@@ -1,0 +1,35 @@
+{
+  "name": "@nocobase/plugin-auth-oidc",
+  "displayName": "Auth: OIDC (Microsoft Entra ID / Azure AD)",
+  "displayName.zh-CN": "认证：OIDC（微软 Entra ID / Azure AD）",
+  "description": "Authenticate users via OpenID Connect — pre-configured for Microsoft Entra ID (Azure AD), compatible with any standards-compliant OIDC provider.",
+  "description.zh-CN": "通过 OpenID Connect 认证用户，预配置支持微软 Entra ID（Azure AD）及任何标准 OIDC 提供商。",
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "main": "./dist/server/index.js",
+  "keywords": [
+    "Authentication",
+    "OIDC",
+    "SSO",
+    "Azure",
+    "Microsoft"
+  ],
+  "dependencies": {
+    "openid-client": "^5.6.4"
+  },
+  "devDependencies": {
+    "@formily/react": "2.x",
+    "antd": "5.x",
+    "i18next": "^22.4.9",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^11.15.1"
+  },
+  "peerDependencies": {
+    "@nocobase/auth": "2.x",
+    "@nocobase/client": "2.x",
+    "@nocobase/database": "2.x",
+    "@nocobase/server": "2.x",
+    "@nocobase/utils": "2.x"
+  }
+}
