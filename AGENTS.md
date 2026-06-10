@@ -6,10 +6,73 @@ This file holds the team-shared rules for AI coding agents working in this repos
 
 If a file `AGENTS.local.md` exists in this repository root, read it once at the start of the session and treat its contents as additional personal rules that extend (but never override) the team rules in this file.
 
+## Development Commands
+
+```bash
+# Development
+yarn dev              # Start client + server in watch mode (default port 13000)
+yarn dev-server       # Start server only (headless/API development)
+
+# Build & run
+yarn build            # Production build (all packages)
+yarn start            # Start production build
+
+# Database
+yarn nocobase upgrade # Run pending migrations and sync new collections to DB
+
+# Tests — single file
+yarn test <path>                                  # server or client
+yarn test packages/core/server/src/__tests__/Application.test.ts
+yarn test packages/core/flow-engine/src/__tests__/flow-engine.test.ts --run --reporter=verbose
+
+# Tests — suites
+yarn test:server      # All server tests (always sequential)
+yarn test:client      # All client tests
+yarn ts               # Alias: test:server
+yarn tc               # Alias: test:client
+
+# Code quality (run before marking work done)
+yarn eslint --fix <file>
+```
+
+## Architecture Overview
+
+Monorepo using Yarn workspaces (`packages/*/*`). Key areas:
+
+| Path | Description |
+|------|-------------|
+| `packages/core/server/` | Koa-based backend framework (`@nocobase/server`) |
+| `packages/core/client/` | React client v1 — `SchemaComponent` / Formily / Ant Design v5 |
+| `packages/core/client-v2/` | React client v2 — lightweight, `FlowEngine` / `FlowModel` based |
+| `packages/core/flow-engine/` | Shared workflow/action engine underpinning client v2 |
+| `packages/core/database/` | Database abstraction (postgres, mysql, mariadb, kingbase) |
+| `packages/core/resourcer/` | REST resource routing layer |
+| `packages/core/acl/` | Access control list |
+| `packages/core/cli/` | `nocobase` CLI (dev, build, start, test, upgrade, create-plugin) |
+| `packages/core/build/` | Rspack/Babel-based build system |
+| `packages/plugins/@nocobase/` | 100+ built-in and optional plugins |
+| `packages/presets/preset-nocobase/` | Main preset wiring all built-in plugins together |
+
+**Plugin anatomy:**
+```
+packages/plugins/@nocobase/plugin-<name>/
+├── src/
+│   ├── server/
+│   │   ├── plugin.ts          # extends Plugin (from @nocobase/server)
+│   │   ├── collections/       # collection (table) definitions
+│   │   └── migrations/        # explicit DB migrations
+│   └── client/
+│       ├── index.tsx          # extends Plugin (from @nocobase/client)
+│       └── locale/            # i18n JSON (en-US.ts, zh-CN.ts)
+└── package.json
+```
+
+**Environment:** Copy `.env.example` to `.env`. Key variables: `APP_PORT` (default 13000), `DB_DIALECT`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, `DB_PASSWORD`, `APP_KEY`.
+
 ## Project Structure
 
 - New plugins live under `packages/plugins/@nocobase/plugin-<name>/`. Reuse the existing plugin scaffold; do not invent a new layout.
-- This repo has two client runtimes: legacy v1 (`src/client/`, `@nocobase/client`, `SchemaComponent`) and v2 (`src/client-v2/`, `@nocobase/client-v2`, `FlowEngine` / `FlowModel`). Confirm which runtime the file under edit belongs to before writing code. Import direction is one-way: v1 client may import from v2 (`@nocobase/client-v2`), but v2 client must never import from v1 (`@nocobase/client`).
+- This repo has two client runtimes: legacy v1 (`packages/core/client/`, `@nocobase/client`, `SchemaComponent`) and v2 (`packages/core/client-v2/`, `@nocobase/client-v2`, `FlowEngine` / `FlowModel`). Confirm which runtime the file under edit belongs to before writing code. Import direction is one-way: v1 client may import from v2 (`@nocobase/client-v2`), but v2 client must never import from v1 (`@nocobase/client`).
 - Pro (not open source) plugins live in individual repositories under `packages/plugins` or `packages/pro-plugins` (for example, `@nocobase/plugin-workflow-approval`), but used not as submodules. When working on a pro plugin, clone its repo separately under `packages/plugins/` or `packages/pro-plugins/` and treat it as a standalone project with git.
 
 ## Code Style Rules
