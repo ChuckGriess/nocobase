@@ -7,9 +7,11 @@
  * For more information, please refer to: https://www.nocobase.com/agreement.
  */
 
-import { PluginAuthOIDCClient } from './plugin';
+// @ts-ignore
+import { name } from '../package.json';
 
-export { PluginAuthOIDCClient };
-export { OIDCButton } from './OIDCButton';
-export { OIDCSettingsForm } from './OIDCSettingsForm';
-export default PluginAuthOIDCClient;
+/** Auth type string — must match between client registration and server registerTypes. */
+export const authType = 'OIDC';
+
+/** i18n namespace for this plugin. */
+export const namespace = name;

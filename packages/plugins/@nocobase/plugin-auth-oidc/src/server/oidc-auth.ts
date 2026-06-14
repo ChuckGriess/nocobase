@@ -10,8 +10,9 @@
 import { BaseAuth } from '@nocobase/auth';
 import type { AuthConfig } from '@nocobase/auth';
 import * as openidClient from 'openid-client';
+import { authType } from '../constants';
 
-export const OIDC_AUTH_TYPE = 'OIDC';
+export const OIDC_AUTH_TYPE = authType;
 
 /** Cache namespace holding the per-login transient state → {nonce, codeVerifier} map. */
 export const OIDC_CACHE_NAME = 'oidc-auth';

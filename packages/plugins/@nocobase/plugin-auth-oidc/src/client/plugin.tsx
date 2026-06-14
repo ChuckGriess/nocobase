@@ -8,13 +8,26 @@
  */
 
 import { Plugin } from '@nocobase/client';
-import React from 'react';
+import AuthPlugin from '@nocobase/plugin-auth/client';
 import { OIDCButton } from './OIDCButton';
+import { OIDCSettingsForm } from './OIDCSettingsForm';
+import { authType, namespace } from '../constants';
+import { enUS, zhCN } from './locale';
 
 export class PluginAuthOIDCClient extends Plugin {
   async load() {
-    // Register the OIDC login component so the auth plugin can render it
-    // on the sign-in page when an OIDC authenticator is configured.
-    this.app.addComponents({ OIDCLoginButton: OIDCButton });
+    await this.app.i18n.loadResourceBundle('en-US', namespace, enUS);
+    await this.app.i18n.loadResourceBundle('zh-CN', namespace, zhCN);
+
+    // Register the OIDC auth type so it appears in Settings → Authentication
+    // (type dropdown + admin settings form) and renders a sign-in button on
+    // the login page. The authType string must match the server's registerTypes.
+    const auth = this.app.pm.get(AuthPlugin);
+    auth.registerType(authType, {
+      components: {
+        SignInButton: OIDCButton,
+        AdminSettingsForm: OIDCSettingsForm,
+      },
+    });
   }
 }

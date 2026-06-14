@@ -10,16 +10,16 @@
 import React, { useCallback } from 'react';
 import { Button, message } from 'antd';
 import { useAPIClient } from '@nocobase/client';
+import type { Authenticator } from '@nocobase/plugin-auth/client';
+import { useOIDCTranslation } from './locale';
 
 interface OIDCButtonProps {
-  /** The name field of the authenticator record in NocoBase */
-  authenticatorName: string;
-  /** Button label — defaults to "Sign in with Microsoft" */
-  label?: string;
+  /** The authenticator record, injected by the auth plugin's sign-in page. */
+  authenticator: Authenticator;
 }
 
 /**
- * Renders a "Sign in with Microsoft" button on the NocoBase login page.
+ * Sign-in button rendered on the NocoBase login page for an OIDC authenticator.
  *
  * Clicking it:
  *   1. Calls GET /api/auth:getAuthUrl?authenticator=<name>
@@ -28,26 +28,28 @@ interface OIDCButtonProps {
  * The OIDC provider then redirects back to /api/auth:redirect which issues
  * the JWT and redirects the browser to the app home page.
  */
-export const OIDCButton: React.FC<OIDCButtonProps> = ({ authenticatorName, label = 'Sign in with Microsoft' }) => {
+export const OIDCButton: React.FC<OIDCButtonProps> = ({ authenticator }) => {
   const api = useAPIClient();
+  const { t } = useOIDCTranslation();
+  const label = authenticator.title || t('Sign in with Microsoft');
 
   const handleClick = useCallback(async () => {
     try {
       const response = await api.request({
-        url: '/auth:getAuthUrl',
+        url: 'auth:getAuthUrl',
         method: 'GET',
-        params: { authenticator: authenticatorName },
+        params: { authenticator: authenticator.name },
       });
       const { redirectUrl } = response.data?.data ?? {};
       if (redirectUrl) {
         window.location.href = redirectUrl;
       } else {
-        message.error('Could not retrieve SSO login URL.');
+        message.error(t('Could not retrieve the SSO login URL.'));
       }
     } catch {
-      message.error('SSO login failed. Please try again.');
+      message.error(t('SSO login failed. Please try again.'));
     }
-  }, [api, authenticatorName]);
+  }, [api, authenticator.name, t]);
 
   return (
     <Button block size="large" icon={<MicrosoftIcon />} onClick={handleClick} aria-label={label}>
