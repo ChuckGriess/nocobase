@@ -134,7 +134,7 @@ export async function seedDemoContent(db: Database): Promise<{ skipped: boolean 
   });
 
   // Assignment for course 1
-  await db.getRepository('lms_assignments').create({
+  const introAssignment = await db.getRepository('lms_assignments').create({
     values: {
       title: 'Build Your First Collection',
       description: 'Create a "books" collection with title, author, and publishedAt fields.',
@@ -214,7 +214,7 @@ export async function seedDemoContent(db: Database): Promise<{ skipped: boolean 
     },
   });
 
-  await db.getRepository('lms_enrollments').create({
+  const enrollment = await db.getRepository('lms_enrollments').create({
     values: {
       studentId: student.get('id'),
       courseId: intro.get('id'),
@@ -224,7 +224,32 @@ export async function seedDemoContent(db: Database): Promise<{ skipped: boolean 
     },
   });
 
-  void introQuiz;
+  // A pending (ungraded) assignment submission so the instructor's Grading page
+  // has a row to review out of the box.
+  await db.getRepository('lms_submissions').create({
+    values: {
+      assignmentId: introAssignment.get('id'),
+      studentId: student.get('id'),
+      status: 'submitted',
+      content: 'My books collection has title (string), author (string), and publishedAt (date) fields.',
+      submittedAt: new Date(),
+    },
+  });
+
+  // A completed quiz attempt so the instructor's Quiz Results page has data.
+  await db.getRepository('lms_quiz_attempts').create({
+    values: {
+      quizId: introQuiz.get('id'),
+      studentId: student.get('id'),
+      enrollmentId: enrollment.get('id'),
+      answers: { '1': 'hasMany', '2': 'true' },
+      score: 100,
+      passed: true,
+      startedAt: new Date(),
+      completedAt: new Date(),
+    },
+  });
+
   return { skipped: false };
 }
 

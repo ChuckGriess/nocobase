@@ -112,6 +112,11 @@ const LMS_ACL_RESOURCES = [
   },
   {
     roleName: 'instructor',
+    resource: 'lms_quiz_attempts',
+    actions: { list: { fields: [] }, get: { fields: [] } },
+  },
+  {
+    roleName: 'instructor',
     resource: 'lms_certificates',
     actions: { list: { fields: [] }, get: { fields: [] }, create: { fields: [] } },
   },

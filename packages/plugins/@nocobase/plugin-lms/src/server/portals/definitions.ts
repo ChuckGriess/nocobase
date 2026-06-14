@@ -72,6 +72,19 @@ export const INSTRUCTOR_PORTAL: PortalGroup = {
       ],
     },
     {
+      key: 'instructor_quiz_attempts',
+      title: 'Quiz Results',
+      icon: 'TrophyOutlined',
+      collection: 'lms_quiz_attempts',
+      columns: [
+        { field: 'student', targetLabelField: 'nickname' },
+        { field: 'quiz', targetLabelField: 'title' },
+        { field: 'score' },
+        { field: 'passed' },
+        { field: 'completedAt' },
+      ],
+    },
+    {
       key: 'instructor_announcements',
       title: 'Announcements',
       icon: 'NotificationOutlined',

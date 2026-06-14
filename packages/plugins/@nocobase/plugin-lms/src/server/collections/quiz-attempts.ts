@@ -59,6 +59,7 @@ export default {
       target: 'lms_quizzes',
       foreignKey: 'quizId',
       onDelete: 'CASCADE',
+      uiSchema: { type: 'object', title: '{{t("Quiz")}}', 'x-component': 'AssociationField' },
     },
     {
       interface: 'obo',
@@ -66,6 +67,7 @@ export default {
       name: 'student',
       target: 'users',
       foreignKey: 'studentId',
+      uiSchema: { type: 'object', title: '{{t("Student")}}', 'x-component': 'AssociationField' },
     },
     {
       interface: 'obo',
@@ -74,6 +76,7 @@ export default {
       target: 'lms_enrollments',
       foreignKey: 'enrollmentId',
       onDelete: 'CASCADE',
+      uiSchema: { type: 'object', title: '{{t("Enrollment")}}', 'x-component': 'AssociationField' },
     },
   ],
 } as CollectionOptions;

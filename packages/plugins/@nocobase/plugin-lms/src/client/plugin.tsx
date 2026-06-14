@@ -48,6 +48,13 @@ const enUS = {
   Submitted: 'Submitted',
   Passed: 'Passed',
   Failed: 'Failed',
+  Quiz: 'Quiz',
+  'Quiz Results': 'Quiz Results',
+  'Score (%)': 'Score (%)',
+  'Completed At': 'Completed At',
+  Enrollment: 'Enrollment',
+  Answers: 'Answers',
+  'Started At': 'Started At',
 };
 
 const zhCN = {
@@ -80,4 +87,11 @@ const zhCN = {
   Submitted: '已提交',
   Passed: '通过',
   Failed: '未通过',
+  Quiz: '测验',
+  'Quiz Results': '测验结果',
+  'Score (%)': '分数 (%)',
+  'Completed At': '完成时间',
+  Enrollment: '报名',
+  Answers: '答案',
+  'Started At': '开始时间',
 };
